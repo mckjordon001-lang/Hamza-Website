@@ -1,0 +1,59 @@
+# Local development / demo stack for the bookstore.
+#   cp .env.example .env
+#   docker compose up -d
+#   docker compose run --rm wpcli sh /project/scripts/setup.sh
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-wordpress}
+      MARIADB_USER: ${DB_USER:-wordpress}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    depends_on: [db]
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    environment: &wp_env
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
+      WORDPRESS_DB_USER: ${DB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_MEMORY_LIMIT', '256M' );
+        define( 'DISALLOW_FILE_EDIT', true );
+    volumes:
+      - wp_data:/var/www/html
+      - ./wp-content/themes/kitab:/var/www/html/wp-content/themes/kitab
+      - ./wp-content/plugins/kitab-book-details:/var/www/html/wp-content/plugins/kitab-book-details
+
+  wpcli:
+    image: wordpress:cli-php8.3
+    profiles: ["tools"]
+    user: "33:33"          # same uid as www-data in the apache image
+    depends_on: [db, wordpress]
+    working_dir: /var/www/html
+    environment:
+      <<: *wp_env
+      SITE_URL: ${SITE_URL:-http://localhost:8080}
+      SITE_TITLE: ${SITE_TITLE:-Hamza Book Store}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      IMPORT_SAMPLE_BOOKS: ${IMPORT_SAMPLE_BOOKS:-yes}
+      HOME: /tmp
+    volumes:
+      - wp_data:/var/www/html
+      - ./wp-content/themes/kitab:/var/www/html/wp-content/themes/kitab
+      - ./wp-content/plugins/kitab-book-details:/var/www/html/wp-content/plugins/kitab-book-details
+      - ./:/project:ro
+
+volumes:
+  db_data:
+  wp_data:
