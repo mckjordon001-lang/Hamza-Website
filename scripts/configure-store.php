@@ -313,6 +313,18 @@ WP_CLI::log( 'Menus: Primary and Footer.' );
  * Shop sidebar widgets (classic widgets).
  * ---------------------------------------------------------------------- */
 $sidebars = get_option( 'sidebars_widgets', array() );
+if ( ! get_option( 'kitab_footer_widgets_cleared' ) ) {
+	// Move WordPress's default blog widgets (Archives, Categories…) out of the footer.
+	$sidebars['wp_inactive_widgets'] = isset( $sidebars['wp_inactive_widgets'] ) ? $sidebars['wp_inactive_widgets'] : array();
+	foreach ( array( 'footer-1', 'footer-2', 'footer-3' ) as $footer_area ) {
+		if ( ! empty( $sidebars[ $footer_area ] ) ) {
+			$sidebars['wp_inactive_widgets'] = array_merge( $sidebars['wp_inactive_widgets'], $sidebars[ $footer_area ] );
+		}
+		$sidebars[ $footer_area ] = array();
+	}
+	update_option( 'sidebars_widgets', $sidebars );
+	update_option( 'kitab_footer_widgets_cleared', 1 );
+}
 if ( empty( $sidebars['sidebar-shop'] ) ) {
 	update_option( 'widget_woocommerce_product_categories', array( 1 => array( 'title' => 'Categories', 'orderby' => 'order', 'count' => 1, 'hierarchical' => 1, 'dropdown' => 0, 'show_children_only' => 0, 'hide_empty' => 1 ), '_multiwidget' => 1 ) );
 	update_option( 'widget_woocommerce_price_filter', array( 1 => array( 'title' => 'Filter by price' ), '_multiwidget' => 1 ) );
